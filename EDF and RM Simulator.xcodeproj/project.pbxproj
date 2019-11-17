@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		735D07D8237A63C500B90D65 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 735D07D7237A63C500B90D65 /* main.cpp */; };
+		DACF5EAA23815B2900B2D873 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DACF5EA923815B2900B2D873 /* main.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -24,7 +24,7 @@
 
 /* Begin PBXFileReference section */
 		735D07D4237A63C500B90D65 /* EDF and RM Simulator */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "EDF and RM Simulator"; sourceTree = BUILT_PRODUCTS_DIR; };
-		735D07D7237A63C500B90D65 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		DACF5EA923815B2900B2D873 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -57,7 +57,7 @@
 		735D07D6237A63C500B90D65 /* EDF and RM Simulator */ = {
 			isa = PBXGroup;
 			children = (
-				735D07D7237A63C500B90D65 /* main.cpp */,
+				DACF5EA923815B2900B2D873 /* main.cpp */,
 			);
 			path = "EDF and RM Simulator";
 			sourceTree = "<group>";
@@ -119,7 +119,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				735D07D8237A63C500B90D65 /* main.cpp in Sources */,
+				DACF5EAA23815B2900B2D873 /* main.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
