@@ -35,38 +35,23 @@ struct Job
     int Period;
 };
 
-int gcd(int m, int n)
-{
-    while(n != 0)
-    {
-        int r = m % n;
-        m = n;
-        n = r;
-    }
-    return m;
-}
+int Total_Task_Number = 0;  // 總共的 task 個數
+struct Task task[1000];  // 儲存 struct task 資訊
+int MaxPH = 0;  // 最大 Phase time
+int LCM = 0;  // 週期的最小公倍數
 
-int lcm(int m, int n)
-{
-    return m * n / gcd(m, n);
-}
-
-void showlist(list <int> g)
-{
-    cout << "List is: ";
-    list <int> :: iterator it;
-    for(it = g.begin(); it != g.end(); ++it)
-        cout << *it << " ";
-    cout << endl;
-}
-
+int gcd(int m, int n);
+int lcm(int m, int n);
+void showlist(list <int> g);
+void readData();
+void schedulability_test();
 void EDF();
 void RM();
 
-
-
 int main()
 {
+    readData();
+    schedulability_test();
     cout << "RM 排程" << endl;
     RM();
     puts("");
@@ -74,21 +59,10 @@ int main()
     EDF();
 }
 
-
-// MARK: RM
-void RM()
+// MARK: Step 1
+void readData()
 {
-    int Total_Task_Number = 0;  // 總共的 task 個數
-    int Total_Job_Number = 0; // 總共的 job 個數
-    int Miss_Deadline_Job_Number=0;  // 錯過 deadline 的工作總數
-    int LCM = 0;  // 週期的最小公倍數
-    int MaxPH = 0;  // 最大 Phase time
-    int Clock = 0;  // current clock
-    struct Task task[1000];  // 儲存 struct task 資訊
-    struct Job job[1000];  // 儲存 struct job 資訊
-    list <int> waitingQ; // RM 的待執行工作序列
-    vector <int> RM_Q; // RM 排班執行順序
-    
+    // 將 TXT 檔案讀取並存入到 task struct 中
     fstream file;
     string filename = "/Users/toby/Library/Mobile Documents/com~apple~CloudDocs/Collage Classes/Real time system/EDF and RM Simulator/EDF and RM Simulator/test1.txt";
     file.open(filename.c_str());
@@ -99,7 +73,6 @@ void RM()
     
     string line; // 暫存讀入的資料
     
-    // MARK: RM - Step 1
     for(Total_Task_Number = 0; getline(file, line); Total_Task_Number++)
     {
         string substr;
@@ -133,16 +106,18 @@ void RM()
         cout << task[i].WCET << ", ";
         cout << task[i].Utilization << endl;
     }
-    
-    // MARK: RM - Step 2
+    file.close();
+}
+
+// MARK: Step 2
+void schedulability_test()
+{
     LCM = task[0].Period;
     for(int i = 1; i < Total_Task_Number; i++)
     {
         LCM = lcm(LCM, task[i].Period);
     }
-    cout << "lcm number: " << LCM << endl;
     
-    // MARK: RM - Schedulability test
     float schedulability_test = 0;
     for (int i = 0; i < Total_Task_Number; i++)
     {
@@ -150,12 +125,23 @@ void RM()
         schedulability_test += temp / min(task[i].Period, task[i].RDeadline);;
     }
     
-    
     if(schedulability_test > 1)
-        cout << "使用 EDF 可能不能排程" << endl;
+        cout << "使用 EDF 可能不能排程\n" << endl;
     if(schedulability_test > Total_Task_Number * ((pow(2, 1 / Total_Task_Number) - 1)))
-        cout << "使用 RM 可能不能排程" << endl;
-    
+        cout << "使用 RM 可能不能排程\n" << endl;
+}
+
+
+// MARK: RM
+void RM()
+{
+    int Total_Job_Number = 0; // 總共的 job 個數
+    int Miss_Deadline_Job_Number=0;  // 錯過 deadline 的工作總數
+    int Clock = 0;  // current clock
+    struct Job job[1000];  // 儲存 struct job 資訊
+    list <int> waitingQ; // RM 的待執行工作序列
+    vector <int> RM_Q; // RM 排班執行順序
+
     // MARK: RM - Step 3
     waitingQ.clear();
     
@@ -199,8 +185,6 @@ void RM()
             }
         }
         
-        //showlist(Q);
-        
         // MARK: RM - Step 8
         
         // RM
@@ -237,93 +221,18 @@ void RM()
          
         Clock++;
     }
-    
-    // MARK: RM - 程式結束
-    file.close();
 }
 
 
 // MARK: EDF
 void EDF()
 {
-    int Total_Task_Number = 0;  // 總共的 task 個數
     int Total_Job_Number = 0; // 總共的 job 個數
     int Miss_Deadline_Job_Number=0;  // 錯過 deadline 的工作總數
-    int LCM = 0;  // 週期的最小公倍數
-    int MaxPH = 0;  // 最大 Phase time
     int Clock = 0;  // current clock
-    struct Task task[1000];  // 儲存 struct task 資訊
     struct Job job[1000];  // 儲存 struct job 資訊
     list <int> waitingQ; // RM 的待執行工作序列
-    list <int> waitingQ_EDF; // EDF 的待執行工作序列
     vector <int> EDF_Q; // EDF 排班執行順序
-    
-    fstream file;
-    string filename = "/Users/toby/Library/Mobile Documents/com~apple~CloudDocs/Collage Classes/Real time system/EDF and RM Simulator/EDF and RM Simulator/test1.txt";
-    file.open(filename.c_str());
-    if(!file)
-    {
-        cout << "檔案無法開啟" << endl;
-    }
-    
-    string line; // 暫存讀入的資料
-    
-    // MARK: EDF - Step 1
-    for(Total_Task_Number = 0; getline(file, line); Total_Task_Number++)
-    {
-        string substr;
-        stringstream line_ss(line);
-        vector<int> result;
-        for (int j = 0; line_ss >> j;)
-        {
-            result.push_back(j);
-            if (line_ss.peek() == ',')
-                line_ss.ignore();
-        }
-        int number = 0;
-        task[Total_Task_Number].TID = Total_Task_Number;
-        task[Total_Task_Number].Phase = result[number++];
-        if (task[Total_Task_Number].Phase > MaxPH)
-            MaxPH = task[Total_Task_Number].Phase;
-        task[Total_Task_Number].Period = result[number++];
-        task[Total_Task_Number].RDeadline = result[number++];
-        task[Total_Task_Number].WCET = result[number++];
-        task[Total_Task_Number].Utilization = 0;
-    }
-    
-    cout << "TID, " << "phase time, " << "period, " << "relative deadline, " << "execution time, " << "utilization" << endl;
-    
-    for (size_t i = 0; i < Total_Task_Number; i++)
-    {
-        cout << task[i].TID << ", ";
-        cout << task[i].Phase << ", ";
-        cout << task[i].Period << ", ";
-        cout << task[i].RDeadline << ", ";
-        cout << task[i].WCET << ", ";
-        cout << task[i].Utilization << endl;
-    }
-    
-    // MARK: EDF - Step 2
-    LCM = task[0].Period;
-    for(int i = 1; i < Total_Task_Number; i++)
-    {
-        LCM = lcm(LCM, task[i].Period);
-    }
-    cout << "lcm number: " << LCM << endl;
-    
-    // MARK: EDF - Schedulability test
-    float schedulability_test = 0;
-    for (int i = 0; i < Total_Task_Number; i++)
-    {
-        float temp = task[i].WCET;
-        schedulability_test += temp / min(task[i].Period, task[i].RDeadline);;
-    }
-    
-    
-    if(schedulability_test > 1)
-        cout << "使用 EDF 可能不能排程" << endl;
-    if(schedulability_test > Total_Task_Number * ((pow(2, 1 / Total_Task_Number) - 1)))
-        cout << "使用 RM 可能不能排程" << endl;
     
     // MARK: EDF - Step 3
     waitingQ.clear();
@@ -404,11 +313,35 @@ void EDF()
         }
         earliest_deadline = INT_MAX;
         EDF_PID = -1;
-        
          
         Clock++;
     }
-    
-    // MARK: EDF - 程式結束
-    file.close();
+}
+
+// MARK: GCD
+int gcd(int m, int n)
+{
+    while(n != 0)
+    {
+        int r = m % n;
+        m = n;
+        n = r;
+    }
+    return m;
+}
+
+// MARK: LCM
+int lcm(int m, int n)
+{
+    return m * n / gcd(m, n);
+}
+
+// MARK: showList
+void showlist(list <int> g)
+{
+    cout << "List is: ";
+    list <int> :: iterator it;
+    for(it = g.begin(); it != g.end(); ++it)
+        cout << *it << " ";
+    cout << endl;
 }
