@@ -13,6 +13,7 @@
 #include <vector>
 #include <list>
 #include <math.h>
+#include <limits.h>
 
 using namespace std;
 
@@ -46,8 +47,8 @@ struct Job job[1000];
 bool schedulable_EDF = true;
 bool schedulable_RM = true;
 list <int> Q; // 系統的工作序列 Q
-list <int> EDF_Q; // EDF 工作序列
-list <int> RM_Q; // RM 工作序列
+vector <int> EDF_Q; // EDF 排班執行順序
+vector <int> RM_Q; // RM 排班執行順序
 
 int gcd(int m, int n)
 {
@@ -67,7 +68,7 @@ int lcm(int m, int n)
 
 void showlist(list <int> g)
 {
-    cout << "List is:";
+    cout << "List is: ";
     list <int> :: iterator it;
     for(it = g.begin(); it != g.end(); ++it)
         cout << *it << " ";
@@ -87,7 +88,7 @@ int main(int argc, const char * argv[])
     
     string line; // 暫存讀入的資料
     
-    // MARK: 存入資料到 Task struct
+    // MARK: Step 1
     for(Total_Task_Number = 0; getline(file, line); Total_Task_Number++)
     {
         string substr;
@@ -112,7 +113,7 @@ int main(int argc, const char * argv[])
     
     cout << "TID, " << "phase time, " << "period, " << "relative deadline, " << "execution time, " << "utilization" << endl;
     
-    for (size_t i = 0; i < 3; i++)
+    for (size_t i = 0; i < Total_Task_Number; i++)
     {
         cout << task[i].TID << ", ";
         cout << task[i].Phase << ", ";
@@ -122,7 +123,7 @@ int main(int argc, const char * argv[])
         cout << task[i].Utilization << endl;
     }
     
-    // MARK: 計算 period 的 LCM
+    // MARK: Step 2
     LCM = task[0].Period;
     for(int i = 1; i < Total_Task_Number; i++)
     {
@@ -131,70 +132,137 @@ int main(int argc, const char * argv[])
     cout << "lcm number: " << LCM << endl;
     
     // MARK: Schedulability test
+    float schedulability_test = 0;
     for (int i = 0; i < Total_Task_Number; i++)
     {
-        if(task[i].WCET / min(task[i].Period, task[i].RDeadline) <= 1)
-            schedulable_EDF = false;
-        if(task[i].WCET / min(task[i].Period, task[i].RDeadline) <= Total_Task_Number * (pow(2, 1 / Total_Task_Number) - 1))
-            schedulable_RM = false;
+        float temp = task[i].WCET;
+        schedulability_test += temp / min(task[i].Period, task[i].RDeadline);;
     }
     
+    
+    if(schedulability_test > 1)
+        cout << "使用 EDF 可能不能排程" << endl;
+    if(schedulability_test > Total_Task_Number * ((pow(2, 1 / Total_Task_Number) - 1)))
+        cout << "使用 RM 可能不能排程" << endl;
+    
+    // MARK: Step 3
     Q.clear();
     
-    // MARK: 開始 clock 計算
+    // MARK: Step 4
+    Clock = 0;
+    
+    // MARK: Step 5
     while(Clock < (LCM + MaxPH))
     {
-        if(!Q.empty()) // 有工作則檢查所有工作是否可排 (Step 6)
+        // MARK: Step 6
+        if(!Q.empty()) // 有工作則檢查所有工作是否可排
         {
-            list <int> :: iterator it;
-            for(it = Q.begin(); it != Q.end(); ++it)
+            vector<int> jobToRemove; // 儲存不能在 deadline 前完成 job 的號碼
+            for(list <int> :: iterator it = Q.begin(); it != Q.end(); ++it) // 找出哪些 job 無法在 deadline 完成
             {
-                if(job[*it].absolute_deadline - Clock - job[*it].remain_execution_time <= 0)
+                if(job[*it].absolute_deadline - Clock - job[*it].remain_execution_time < 0)
                 {
-                    cout << "Job number" << *it << "can't be finished" << endl;
+                    cout << "Job T" << *it << " 不能在截限時間內完成" << endl;
                     Miss_Deadline_Job_Number++;
-                    Q.remove(*it);
+                    jobToRemove.push_back(*it);
                 }
             }
+            for(int i = 0; i < jobToRemove.size(); i++) // 移除 job
+            {
+                Q.remove(jobToRemove[i]);
+            }
+            jobToRemove.clear();
         }
         
-        for(int i = 0; i < Total_Task_Number ; i++) // Step 7
+        // MARK: Step 7
+        for(int i = 0; i < Total_Task_Number ; i++)
         {
-            if(Clock - task[i].Phase == 0)
+            if((Clock - task[i].Phase) % task[i].Period == 0)
             {
                 Q.push_back(Total_Job_Number);  // 在 Queue 中存入對應到該 job 的編號
                 job[Total_Job_Number].release_time = Clock;
                 job[Total_Job_Number].remain_execution_time = task[i].WCET;
-                job[Total_Job_Number].absolute_deadline = Clock - task[i].WCET;
+                job[Total_Job_Number].absolute_deadline = task[i].RDeadline + Clock;
                 job[Total_Job_Number].TID = task[i].TID;
                 job[Total_Job_Number++].Period = task[i].Period;
             }
         }
         
-        // Step 8
-        list <int> :: iterator it;
-        int shortest_period = 0;
-        int RM_PID = 0;
-        for(it = Q.begin(); it != Q.end(); ++it) //RM
+        //showlist(Q);
+        
+        // MARK: Step 8
+        
+        // RM
+        int shortest_period = INT_MAX;
+        int RM_PID = -1;
+        for(list <int> :: iterator it = Q.begin(); it != Q.end(); ++it)
         {
-            if(job[*it].Period > shortest_period)
+            if(job[*it].Period < shortest_period)
             {
                 shortest_period = job[*it].Period;
                 RM_PID = *it;
             }
         }
-        if(RM_PID != 0)
-        {
-            if(job[RM_PID].remain_execution_time > 0)
-                job[RM_PID].remain_execution_time--;
-            else
-                Q.remove(RM_PID);
-        }
-        shortest_period = 0;
-        RM_PID = 0;
         
+        if(RM_PID != -1) // 在該時間點，有工作會執行
+        {
+            if(--job[RM_PID].remain_execution_time <= 0)
+                Q.remove(RM_PID);
+            RM_Q.push_back(job[RM_PID].TID);
+        }
+        else
+            RM_Q.push_back(-1);
+        shortest_period = INT_MAX;
+        RM_PID = -1;
+        
+        /*
+        // EDF
+        int earliest_deadline = INT_MAX;
+        int EDF_PID = -1;
+        for(list <int> :: iterator it = Q.begin(); it != Q.end(); ++it)
+        {
+            if(job[*it].absolute_deadline < earliest_deadline)
+            {
+                earliest_deadline = job[*it].Period;
+                EDF_PID = *it;
+            }
+        }
+        
+        if(EDF_PID != -1) // 在該時間點，有工作會執行
+        {
+            if(--job[EDF_PID].remain_execution_time <= 0)
+                Q.remove(EDF_PID);
+            EDF_Q.push_back(job[EDF_PID].TID);
+        }
+        else
+            EDF_Q.push_back(-1);
+        earliest_deadline = INT_MAX;
+        EDF_PID = -1;
+        */
+         
         Clock++;
     }
+    
+    // MARK: 印出結果
+    cout << "RM 排程" << endl;
+    for(int i = 0 ; i < Clock ; i++)
+    {
+        if(RM_Q[i] != -1)
+            cout << i << " T" << RM_Q[i] << endl;
+        else
+            cout << i << endl;
+    }
+    
+    /*
+    cout << "\nEDF 排程" << endl;
+    for(int i = 0 ; i < Clock ; i++)
+    {
+        if(EDF_Q[i] != -1)
+            cout << i << " T" << EDF_Q[i] << endl;
+        else
+            cout << i << endl;
+    }
+    */
     
     // MARK: 程式結束
     file.close();
