@@ -67,9 +67,7 @@ void readData()
     string filename = "/Users/toby/Library/Mobile Documents/com~apple~CloudDocs/Collage Classes/Real time system/EDF and RM Simulator/EDF and RM Simulator/test1.txt";
     file.open(filename.c_str());
     if(!file)
-    {
         cout << "檔案無法開啟" << endl;
-    }
     
     string line; // 暫存讀入的資料
     
@@ -95,6 +93,7 @@ void readData()
         task[Total_Task_Number].Utilization = 0;
     }
     
+    /*
     cout << "TID, " << "phase time, " << "period, " << "relative deadline, " << "execution time, " << "utilization" << endl;
     
     for (size_t i = 0; i < Total_Task_Number; i++)
@@ -106,6 +105,8 @@ void readData()
         cout << task[i].WCET << ", ";
         cout << task[i].Utilization << endl;
     }
+    
+    */
     file.close();
 }
 
@@ -126,7 +127,7 @@ void schedulability_test()
     }
     
     if(schedulability_test > 1)
-        cout << "使用 EDF 可能不能排程\n" << endl;
+        cout << "使用 EDF 可能不能排程" << endl;
     if(schedulability_test > Total_Task_Number * ((pow(2, 1 / Total_Task_Number) - 1)))
         cout << "使用 RM 可能不能排程\n" << endl;
 }
@@ -159,7 +160,7 @@ void RM()
             {
                 if(job[*it].absolute_deadline - Clock - job[*it].remain_execution_time < 0)
                 {
-                    cout << "Job T" << *it << " 不能在截限時間內完成" << endl;
+                    cout << "Job T" << job[*it].TID << " 不能在截限時間內完成" << endl;
                     Miss_Deadline_Job_Number++;
                     jobToRemove.push_back(*it);
                 }
@@ -174,7 +175,7 @@ void RM()
         // MARK: RM - Step 7
         for(int i = 0; i < Total_Task_Number ; i++)
         {
-            if((Clock - task[i].Phase) % task[i].Period == 0)
+            if(Clock - task[i].Phase >= 0 && (Clock - task[i].Phase) % task[i].Period == 0)
             {
                 waitingQ.push_back(Total_Job_Number);  // 在 Queue 中存入對應到該 job 的編號
                 job[Total_Job_Number].release_time = Clock;
@@ -211,7 +212,7 @@ void RM()
             RM_Q.push_back(job[RM_PID].TID);
             cout << Clock << " T" << job[RM_PID].TID << endl;
         }
-        else
+        else // 在該時間點，沒有工作要執行
         {
             RM_Q.push_back(-1);
             cout << Clock << endl;
@@ -219,6 +220,7 @@ void RM()
         shortest_period = INT_MAX;
         RM_PID = -1;
          
+        // MARK: RM - Step 9
         Clock++;
     }
 }
@@ -230,7 +232,7 @@ void EDF()
     int Total_Job_Number = 0; // 總共的 job 個數
     int Miss_Deadline_Job_Number=0;  // 錯過 deadline 的工作總數
     int Clock = 0;  // current clock
-    struct Job job[1000];  // 儲存 struct job 資訊
+    struct Job job[1000] = {};  // 儲存 struct job 資訊
     list <int> waitingQ; // RM 的待執行工作序列
     vector <int> EDF_Q; // EDF 排班執行順序
     
@@ -251,7 +253,7 @@ void EDF()
             {
                 if(job[*it].absolute_deadline - Clock - job[*it].remain_execution_time < 0)
                 {
-                    cout << "Job T" << *it << " 不能在截限時間內完成" << endl;
+                    cout << "Job T" << job[*it].TID << " 不能在截限時間內完成" << endl;
                     Miss_Deadline_Job_Number++;
                     jobToRemove.push_back(*it);
                 }
@@ -263,10 +265,12 @@ void EDF()
             jobToRemove.clear();
         }
         
+        
         // MARK: EDF - Step 7
         for(int i = 0; i < Total_Task_Number ; i++)
         {
-            if((Clock - task[i].Phase) % task[i].Period == 0)
+            //showlist(waitingQ);
+            if(Clock - task[i].Phase >= 0 && (Clock - task[i].Phase) % task[i].Period == 0)
             {
                 waitingQ.push_back(Total_Job_Number);  // 在 Queue 中存入對應到該 job 的編號
                 job[Total_Job_Number].release_time = Clock;
@@ -314,6 +318,7 @@ void EDF()
         earliest_deadline = INT_MAX;
         EDF_PID = -1;
          
+        // MARK: EDF - Step 9
         Clock++;
     }
 }
